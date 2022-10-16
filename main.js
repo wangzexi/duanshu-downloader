@@ -37,7 +37,7 @@ async function main() {
       doneClasses = JSON.parse(await fs.readFile('doneClassIds.json'))
     } catch (_) { }
 
-    const downloadClass = async (classId, title) => {
+    const downloadClass = async (i, classId, title) => {
       const page = await browser.newPage()
 
       page.on('response', async (response) => {
@@ -45,7 +45,7 @@ async function main() {
         const url = request.url()
         if (!/\.m3u8/.test(url)) return
 
-        const res = shell.exec(`ffmpeg -y -i "${url}" -vcodec copy -acodec copy -absf aac_adtstoasc "downloads/${title}.mp4"`)
+        const res = shell.exec(`ffmpeg -y -i "${url}" -vcodec copy -acodec copy -absf aac_adtstoasc "downloads/${i}.${title}.mp4"`)
         if (res.code === 0) {
           doneClasses.push(classId)
           await fs.writeFile('doneClassIds.json', JSON.stringify(doneClasses, null, 2))
@@ -56,8 +56,11 @@ async function main() {
     }
 
     // 遍历下载
+    let i = 0;
     for (const chapter of chapters.response.data) {
       for (const { title, id } of chapter.class_content) {
+        ++i;
+
         if (doneClasses.includes(id)) {
           console.log('跳过', title, id)
           continue
@@ -65,8 +68,7 @@ async function main() {
 
         try {
           console.log('下载', title, id)
-
-          await downloadClass(id, title)
+          await downloadClass(i, id, title)
 
           const delay = Math.floor(5 + Math.random() * 1)
           console.log('延迟', delay)
